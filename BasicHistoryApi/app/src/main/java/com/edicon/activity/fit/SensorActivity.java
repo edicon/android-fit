@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2014 Google, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package com.google.android.gms.fit.samples.basicsensorsapi;
+package com.edicon.activity.fit;
 
 import android.Manifest;
 import android.content.Intent;
@@ -37,10 +22,12 @@ import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Scope;
 import com.google.android.gms.common.api.Status;
-import com.google.android.gms.fit.samples.common.logger.Log;
-import com.google.android.gms.fit.samples.common.logger.LogView;
-import com.google.android.gms.fit.samples.common.logger.LogWrapper;
-import com.google.android.gms.fit.samples.common.logger.MessageOnlyLogFilter;
+import com.edicon.activity.common.logger.Log;
+import com.edicon.activity.common.logger.LogView;
+import com.edicon.activity.common.logger.LogWrapper;
+import com.edicon.activity.common.logger.MessageOnlyLogFilter;
+import com.google.android.gms.fit.samples.basichistoryapi.BuildConfig;
+import com.google.android.gms.fit.samples.basichistoryapi.R;
 import com.google.android.gms.fitness.Fitness;
 import com.google.android.gms.fitness.data.DataPoint;
 import com.google.android.gms.fitness.data.DataSource;
@@ -60,7 +47,7 @@ import java.util.concurrent.TimeUnit;
  * available data sources and to register/unregister listeners to those sources. It also
  * demonstrates how to authenticate a user with Google Play Services.
  */
-public class MainActivity extends AppCompatActivity {
+public class SensorActivity extends AppCompatActivity {
     public static final String TAG = "BasicSensorsApi";
     // [START auth_variable_references]
     private GoogleApiClient mClient = null;
@@ -117,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
             mClient = new GoogleApiClient.Builder(this)
                     .addApi(Fitness.SENSORS_API)
                     .addScope(new Scope(Scopes.FITNESS_LOCATION_READ))
+                    .addScope(new Scope(Scopes.FITNESS_ACTIVITY_READ))
                     .addConnectionCallbacks(
                             new GoogleApiClient.ConnectionCallbacks() {
                                 @Override
@@ -146,7 +134,7 @@ public class MainActivity extends AppCompatActivity {
                             Log.i(TAG, "Google Play services connection failed. Cause: " +
                                     result.toString());
                             Snackbar.make(
-                                    MainActivity.this.findViewById(R.id.main_activity_view),
+                                    SensorActivity.this.findViewById(R.id.main_activity_view),
                                     "Exception while connecting to Google Play services: " +
                                             result.getErrorMessage(),
                                     Snackbar.LENGTH_INDEFINITE).show();
@@ -171,6 +159,7 @@ public class MainActivity extends AppCompatActivity {
         Fitness.SensorsApi.findDataSources(mClient, new DataSourcesRequest.Builder()
                 // At least one datatype must be specified.
                 .setDataTypes(DataType.TYPE_LOCATION_SAMPLE)
+                .setDataTypes(DataType.TYPE_STEP_COUNT_DELTA)
                 // Can specify whether data type is raw or derived.
                 .setDataSourceTypes(DataSource.TYPE_RAW)
                 .build())
@@ -186,6 +175,9 @@ public class MainActivity extends AppCompatActivity {
                             if (dataSource.getDataType().equals(DataType.TYPE_LOCATION_SAMPLE) && mListener == null) {
                                 Log.i(TAG, "Data source for LOCATION_SAMPLE found!  Registering.");
                                 registerFitnessDataListener(dataSource, DataType.TYPE_LOCATION_SAMPLE);
+                            } else if( dataSource.getDataType().equals(DataType.TYPE_STEP_COUNT_DELTA) && mListener == null) {
+                                Log.i(TAG, "Data source for STEP_COUNT_DELTA found!  Registering.");
+                                registerFitnessDataListener(dataSource, DataType.TYPE_STEP_COUNT_DELTA);
                             }
                         }
                     }
@@ -264,7 +256,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
+        getMenuInflater().inflate(R.menu.menu_sensor, menu);
         return true;
     }
 
@@ -311,7 +303,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void requestPermissions() {
-        boolean shouldProvideRationale = ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION);
+        boolean shouldProvideRationale =
+                ActivityCompat.shouldShowRequestPermissionRationale(this,
+                        Manifest.permission.ACCESS_FINE_LOCATION);
 
         // Provide an additional rationale to the user. This would happen if the user denied the
         // request previously, but didn't check the "Don't ask again" checkbox.
@@ -321,11 +315,11 @@ public class MainActivity extends AppCompatActivity {
                     findViewById(R.id.main_activity_view),
                     R.string.permission_rationale,
                     Snackbar.LENGTH_INDEFINITE)
-                    .setAction(R.string.ok, new View.OnClickListener() {
+                    .setAction(android.R.string.ok, new View.OnClickListener() {
                         @Override
                         public void onClick(View view) {
                             // Request permission
-                            ActivityCompat.requestPermissions(MainActivity.this,
+                            ActivityCompat.requestPermissions(SensorActivity.this,
                                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                                     REQUEST_PERMISSIONS_REQUEST_CODE);
                         }
@@ -336,7 +330,7 @@ public class MainActivity extends AppCompatActivity {
             // Request permission. It's possible this can be auto answered if device policy
             // sets the permission in a given state or the user denied the permission
             // previously and checked "Never ask again".
-            ActivityCompat.requestPermissions(MainActivity.this,
+            ActivityCompat.requestPermissions(SensorActivity.this,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     REQUEST_PERMISSIONS_REQUEST_CODE);
         }
@@ -374,15 +368,14 @@ public class MainActivity extends AppCompatActivity {
                         findViewById(R.id.main_activity_view),
                         R.string.permission_denied_explanation,
                         Snackbar.LENGTH_INDEFINITE)
-                        .setAction(R.string.settings, new View.OnClickListener() {
+                        .setAction(R.string.action_settings, new View.OnClickListener() {
                             @Override
                             public void onClick(View view) {
                                 // Build intent that displays the App settings screen.
                                 Intent intent = new Intent();
                                 intent.setAction(
                                         Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                                Uri uri = Uri.fromParts("package",
-                                        BuildConfig.APPLICATION_ID, null);
+                                Uri uri = Uri.fromParts("package", BuildConfig.APPLICATION_ID, null);
                                 intent.setData(uri);
                                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                                 startActivity(intent);

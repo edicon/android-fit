@@ -16,7 +16,14 @@
   -->
 <resources>
 
-    <string name="app_name">BasicHistoryApi</string>
+    <string name="app_name">MyAtivity</string>
+    <string name="app_history">HistoryActivity</string>
+    <string name="app_record">RecordActivity</string>
+    <string name="app_sonsor">SensorActivity</string>
+    <string name="app_maker">MakerActivity</string>
+    <string name="app_polyline">PolylineActivity</string>
+    <string name="app_myloc">MyLocActivity</string>
+    <string name="app_uisetting">UISettingActivity</string>
     <string name="intro_text">Behold, a data dump from the Fitness API! Check the menu for more actions!</string>
     <string name="action_update_session">Update step count data</string>
     <string name="action_delete_session">Delete step count data</string>

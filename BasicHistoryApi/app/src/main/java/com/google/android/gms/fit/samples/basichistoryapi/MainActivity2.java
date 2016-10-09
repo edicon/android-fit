@@ -15,13 +15,11 @@
  */
 package com.google.android.gms.fit.samples.basichistoryapi;
 
-import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.view.MenuItem;
 
-import com.google.android.gms.fit.samples.common.logger.Log;
-import com.google.android.gms.fit.samples.common.logger.LogView;
+import com.edicon.activity.fit.HistoryActivity;
+import com.edicon.activity.common.logger.Log;
 import com.google.android.gms.fitness.Fitness;
 import com.google.android.gms.fitness.data.DataPoint;
 import com.google.android.gms.fitness.data.DataSet;
@@ -40,7 +38,7 @@ import java.util.concurrent.TimeUnit;
  * This sample demonstrates how to use the History API of the Google Fit platform
  * to update data in the fitness history.
  */
-public class MainActivity2 extends MainActivity {
+public class MainActivity2 extends HistoryActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {

@@ -5,7 +5,7 @@ android {
     buildToolsVersion "23.0.1"
 
     defaultConfig {
-        applicationId "com.google.android.gms.fit.samples.basichistoryapi"
+        applicationId "com.edicon.fit.test"
         minSdkVersion 9
         targetSdkVersion 23
         versionCode 2
@@ -22,6 +22,9 @@ android {
 dependencies {
     // Note, specific version numbers are managed in gradle.properties. This is preferred since it
     // easily keeps sub-projects on the same versions.
+    compile "com.google.android.gms:play-services-maps:${google_play_services_library}"
+    compile "com.google.android.gms:play-services-wearable:${google_play_services_library}"
+    compile "com.google.android.gms:play-services-location:${google_play_services_library}"
     compile "com.google.android.gms:play-services-fitness:${google_play_services_library}"
     compile "com.android.support:appcompat-v7:${google_support_library}"
     compile "com.android.support:design:${google_support_library}"
