@@ -12,6 +12,11 @@ import com.edicon.activity.common.logger.Log;
 import static com.edicon.activity.location.Utils.isBetterLocation;
 import static com.edicon.activity.common.PermUtils.checkMyPermission;
 
+// Google Play Location Service or Android platform location APIs
+// http://stackoverflow.com/questions/21397177/finding-location-google-play-location-service-or-android-platform-location-api
+// ToDo: Using Google Location API
+// http://appus.pro/blog/difference-between-locationmanager-and-google-location-api-services
+
 public class LocationService  {
     private final static String TAG = "Location";
 
