@@ -65,12 +65,15 @@ public class WearableUpdateService extends WearableListenerService implements
 
                 if (dataItemUri.getPath().startsWith(Constants.PATH)) {
                     DataMap dataMap = DataMapItem.fromDataItem(dataEvent.getDataItem()).getDataMap();
+
                     double longitude = dataMap.getDouble(Constants.KEY_LONGITUDE);
                     double latitude = dataMap.getDouble(Constants.KEY_LATITUDE);
                     long time = dataMap.getLong(Constants.KEY_TIME);
                     Calendar calendar = Calendar.getInstance();
                     calendar.setTimeInMillis(time);
+
                     mDataManager.addPoint( new LocationEntry(calendar, latitude, longitude));
+
                     if (mGoogleApiClient.isConnected()) {
                         Wearable.DataApi.deleteDataItems( mGoogleApiClient, dataItemUri).setResultCallback(this);
                     } else {
@@ -109,10 +112,9 @@ public class WearableUpdateService extends WearableListenerService implements
     @Override // ResultCallback
     public void onResult(DataApi.DeleteDataItemsResult deleteDataItemsResult) {
         if (!deleteDataItemsResult.getStatus().isSuccess()) {
-            Log.e(TAG,
-                    "Failed to delete a dataItem, status code: " + deleteDataItemsResult.getStatus()
-                            .getStatusCode() + deleteDataItemsResult.getStatus()
-                            .getStatusMessage());
+            Log.e(TAG, "Failed to delete a dataItem, status code: " + deleteDataItemsResult.getStatus()
+                    .getStatusCode() + deleteDataItemsResult.getStatus()
+                    .getStatusMessage());
         }
     }
 }

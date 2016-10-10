@@ -36,6 +36,7 @@ import com.google.android.gms.fit.samples.basichistoryapi.R;
  * Utility class for access to runtime permissions.
  */
 public abstract class PermUtils {
+
     public static boolean checkMyPermission( Context context ) {
         if ( Build.VERSION.SDK_INT >= 23 &&
                 ContextCompat.checkSelfPermission( context, android.Manifest.permission.ACCESS_FINE_LOCATION ) != PackageManager.PERMISSION_GRANTED &&
@@ -49,12 +50,10 @@ public abstract class PermUtils {
      * Requests the fine location permission. If a rationale with an additional explanation should
      * be shown to the user, displays a dialog that triggers the request.
      */
-    public static void requestPermission(AppCompatActivity activity, int requestId,
-            String permission, boolean finishActivity) {
+    public static void requestPermission(AppCompatActivity activity, int requestId, String permission, boolean finishActivity) {
         if (ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)) {
             // Display a dialog with rationale.
-            PermUtils.RationaleDialog.newInstance(requestId, finishActivity)
-                    .show(activity.getSupportFragmentManager(), "dialog");
+            PermUtils.RationaleDialog.newInstance(requestId, finishActivity).show(activity.getSupportFragmentManager(), "dialog");
         } else {
             // Location permission has not been granted yet, request it.
             ActivityCompat.requestPermissions(activity, new String[]{permission}, requestId);
@@ -68,8 +67,7 @@ public abstract class PermUtils {
      *
      * @see android.support.v4.app.ActivityCompat.OnRequestPermissionsResultCallback
      */
-    public static boolean isPermissionGranted(String[] grantPermissions, int[] grantResults,
-            String permission) {
+    public static boolean isPermissionGranted(String[] grantPermissions, int[] grantResults, String permission) {
         for (int i = 0; i < grantPermissions.length; i++) {
             if (permission.equals(grantPermissions[i])) {
                 return grantResults[i] == PackageManager.PERMISSION_GRANTED;
@@ -84,7 +82,6 @@ public abstract class PermUtils {
     public static class PermissionDeniedDialog extends DialogFragment {
 
         private static final String ARGUMENT_FINISH_ACTIVITY = "finish";
-
         private boolean mFinishActivity = false;
 
         /**
@@ -114,16 +111,14 @@ public abstract class PermUtils {
         public void onDismiss(DialogInterface dialog) {
             super.onDismiss(dialog);
             if (mFinishActivity) {
-                Toast.makeText(getActivity(), R.string.permission_required_toast,
-                        Toast.LENGTH_SHORT).show();
+                Toast.makeText(getActivity(), R.string.permission_required_toast, Toast.LENGTH_SHORT).show();
                 getActivity().finish();
             }
         }
     }
 
     /**
-     * A dialog that explains the use of the location permission and requests the necessary
-     * permission.
+     * A dialog that explains the use of the location permission and requests the necessary permission.
      * <p>
      * The activity should implement
      * {@link android.support.v4.app.ActivityCompat.OnRequestPermissionsResultCallback}
@@ -132,7 +127,6 @@ public abstract class PermUtils {
     public static class RationaleDialog extends DialogFragment {
 
         private static final String ARGUMENT_PERMISSION_REQUEST_CODE = "requestCode";
-
         private static final String ARGUMENT_FINISH_ACTIVITY = "finish";
 
         private boolean mFinishActivity = false;
@@ -171,8 +165,7 @@ public abstract class PermUtils {
                         public void onClick(DialogInterface dialog, int which) {
                             // After click on Ok, request the permission.
                             ActivityCompat.requestPermissions(getActivity(),
-                                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                                    requestCode);
+                                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, requestCode);
                             // Do not finish the Activity while requesting permission.
                             mFinishActivity = false;
                         }
@@ -185,10 +178,7 @@ public abstract class PermUtils {
         public void onDismiss(DialogInterface dialog) {
             super.onDismiss(dialog);
             if (mFinishActivity) {
-                Toast.makeText(getActivity(),
-                        R.string.permission_required_toast,
-                        Toast.LENGTH_SHORT)
-                        .show();
+                Toast.makeText(getActivity(), R.string.permission_required_toast, Toast.LENGTH_SHORT) .show();
                 getActivity().finish();
             }
         }

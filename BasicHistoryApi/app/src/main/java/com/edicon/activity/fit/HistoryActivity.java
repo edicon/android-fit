@@ -65,6 +65,11 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static com.edicon.activity.common.Utils.REQUEST_OAUTH;
+import static com.edicon.activity.common.Utils.REQUEST_RESOLVE_ERROR;
+import static com.edicon.activity.common.Utils.STATE_RESOLVING_ERROR;
+import static com.edicon.activity.common.Utils.handleConnectionFailed;
+import static com.edicon.activity.common.Utils.mResolvingError;
 import static java.text.DateFormat.getDateInstance;
 import static java.text.DateFormat.getTimeInstance;
 
@@ -75,7 +80,6 @@ import static java.text.DateFormat.getTimeInstance;
  */
 public class HistoryActivity extends AppCompatActivity {
     public static final String TAG = "BasicHistoryApi";
-    private static final int REQUEST_OAUTH = 1;
     private static final String DATE_FORMAT = "yyyy.MM.dd HH:mm:ss";
 
     /**
@@ -97,6 +101,7 @@ public class HistoryActivity extends AppCompatActivity {
         // screen, as well as to adb logcat.
         initializeLogging();
         thisActivity = this;
+        mResolvingError = savedInstanceState != null && savedInstanceState.getBoolean(STATE_RESOLVING_ERROR, false);
 
         if (savedInstanceState != null) {
             authInProgress = savedInstanceState.getBoolean(AUTH_PENDING);
@@ -162,25 +167,16 @@ public class HistoryActivity extends AppCompatActivity {
                 .addOnConnectionFailedListener(new GoogleApiClient.OnConnectionFailedListener() {
                     @Override
                     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-                        // Error while connecting. Try to resolve using the pending intent returned.
-                        if (connectionResult.getErrorCode() == FitnessStatusCodes.NEEDS_OAUTH_PERMISSIONS) {
-                            try {
-                                connectionResult.startResolutionForResult( HistoryActivity.this, REQUEST_OAUTH);
-                            } catch (IntentSender.SendIntentException e) {
-                                e.printStackTrace();
-                            }
-                        }
+                        handleConnectionFailed( thisActivity, mClient, connectionResult );
                     }
                 })
                 .enableAutoManage(this, 0, new GoogleApiClient.OnConnectionFailedListener() {
                     @Override
                     public void onConnectionFailed(ConnectionResult result) {
-                        Log.i(TAG, "Google Play services connection failed. Cause: " +
-                                result.toString());
+                        Log.i(TAG, "Google Play services connection failed. Cause: " + result.toString());
                         Snackbar.make(
                                 HistoryActivity.this.findViewById(R.id.main_activity_view),
-                                "Exception while connecting to Google Play services: " +
-                                        result.getErrorMessage(),
+                                "Exception while connecting to Google Play services: " + result.getErrorMessage(),
                                 Snackbar.LENGTH_INDEFINITE).show();
                     }
                 })
@@ -533,8 +529,14 @@ public class HistoryActivity extends AppCompatActivity {
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_OAUTH && resultCode == RESULT_OK) {
-            mClient.connect();
+        if (requestCode == REQUEST_RESOLVE_ERROR || requestCode == REQUEST_OAUTH  ) {
+            mResolvingError = false;
+            if (resultCode == RESULT_OK) {
+                // Make sure the app is not already connected or attempting to connect
+                if (!mClient.isConnecting() && !mClient.isConnected()) {
+                    mClient.connect();
+                }
+            }
         }
     }
 
@@ -559,5 +561,11 @@ public class HistoryActivity extends AppCompatActivity {
 
             return null;
         }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean(STATE_RESOLVING_ERROR, mResolvingError);
     }
 }
