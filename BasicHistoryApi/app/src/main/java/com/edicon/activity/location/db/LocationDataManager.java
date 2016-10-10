@@ -1,6 +1,7 @@
-package com.edicon.activity.location;
+package com.edicon.activity.location.db;
 
-import com.edicon.activity.location.db.LocationDbHelper;
+import com.edicon.activity.common.LocationEntry;
+import com.edicon.activity.common.Utils;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -22,7 +23,7 @@ public class LocationDataManager {
     }
 
     /**
-     * Returns a list of {@link com.edicon.activity.location.LocationEntry}
+     * Returns a list of {@link LocationEntry}
      * objects for the day that the {@link java.util.Calendar} object points at. Internally it uses
      * a cache to speed up subsequent calls. If there is no cached value, it gets the result from
      * the database.
@@ -52,7 +53,7 @@ public class LocationDataManager {
     }
 
     /**
-     * Adds a {@link com.edicon.activity.location.LocationEntry} point to the
+     * Adds a {@link LocationEntry} point to the
      * database and cache if it is a new point.
      */
     public final void addPoint(LocationEntry entry) {

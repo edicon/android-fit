@@ -17,7 +17,7 @@ limitations under the License.
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.google.android.gms.fit.samples.basichistoryapi" >
 
-    <uses-sdk android:minSdkVersion="18" android:targetSdkVersion="24" />
+    <uses-sdk android:minSdkVersion="11" android:targetSdkVersion="24" />
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
@@ -105,7 +105,24 @@ limitations under the License.
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <service android:name="com.edicon.activity.location.db.UpdateService">
+        <activity
+            android:name="com.edicon.activity.location.google.LocationUpdateActivity"
+            android:label="@string/app_loc_update">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.edicon.activity.location.TrackingActivity"
+            android:label="@string/app_track">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service android:name="com.edicon.activity.location.google.WearableUpdateService">
             <intent-filter>
                 <!-- listeners receive events that match the action and data filters -->
                 <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />

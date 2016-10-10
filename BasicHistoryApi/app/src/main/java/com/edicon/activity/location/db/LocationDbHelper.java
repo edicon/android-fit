@@ -8,8 +8,8 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
-import com.edicon.activity.location.LocationEntry;
-import com.edicon.activity.location.Utils;
+import com.edicon.activity.common.LocationEntry;
+import com.edicon.activity.common.Utils;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -21,16 +21,16 @@ public class LocationDbHelper extends SQLiteOpenHelper {
 
     private static final String TAG = "LocationDbHelper";
 
-    public static final String TABLE_NAME = "location";
-    public static final String COLUMN_NAME_DAY = "day";
-    public static final String COLUMN_NAME_LATITUDE = "lat";
-    public static final String COLUMN_NAME_LONGITUDE = "lon";
-    public static final String COLUMN_NAME_TIME = "time";
+    public static final String TABLE_NAME               = "location";
+    public static final String COLUMN_NAME_DAY          = "day";
+    public static final String COLUMN_NAME_LATITUDE     = "lat";
+    public static final String COLUMN_NAME_LONGITUDE    = "lon";
+    public static final String COLUMN_NAME_TIME         = "time";
 
-    private static final String TEXT_TYPE = " TEXT";
-    private static final String INTEGER_TYPE = " INTEGER";
-    private static final String REAL_TYPE = " REAL";
-    private static final String COMMA_SEP = ",";
+    private static final String TEXT_TYPE               = " TEXT";
+    private static final String INTEGER_TYPE            = " INTEGER";
+    private static final String REAL_TYPE               = " REAL";
+    private static final String COMMA_SEP               = ",";
     private static final String SQL_CREATE_ENTRIES =
             "CREATE TABLE " + TABLE_NAME + " ("
                     + BaseColumns._ID + " INTEGER PRIMARY KEY,"
@@ -41,8 +41,8 @@ public class LocationDbHelper extends SQLiteOpenHelper {
                     + " )";
     private static final String SQL_DELETE_ENTRIES = "DROP TABLE IF EXISTS " + TABLE_NAME;
 
-    public static final int DATABASE_VERSION = 1;
-    public static final String DATABASE_NAME = "Location.db";
+    public static final int DATABASE_VERSION            = 1;
+    public static final String DATABASE_NAME            = "Location.db";
 
     public LocationDbHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);

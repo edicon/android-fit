@@ -1,4 +1,4 @@
-package com.edicon.activity.location;
+package com.edicon.activity.common;
 
 /**
  * A collection of constants that is shared between teh wearable and handset apps.

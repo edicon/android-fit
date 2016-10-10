@@ -1,4 +1,4 @@
-package com.edicon.activity.location;
+package com.edicon.activity.location.android;
 
 import android.content.Context;
 import android.location.Location;
@@ -6,10 +6,10 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 
+import com.edicon.activity.common.Utils;
 import com.google.android.gms.fit.samples.basichistoryapi.BuildConfig;
 import com.edicon.activity.common.logger.Log;
 
-import static com.edicon.activity.location.Utils.isBetterLocation;
 import static com.edicon.activity.common.PermUtils.checkMyPermission;
 
 // Google Play Location Service or Android platform location APIs
@@ -46,8 +46,6 @@ public class LocationService  {
         }
         return instance;
     }
-
-
 
     public boolean getLocationServiceState() {
         return locationServiceAvailable;
@@ -141,7 +139,7 @@ public class LocationService  {
 
     private static void updateLocation( Location location ) {
        // ToDo: Save to local db or firebase
-        if( isBetterLocation( location, currentBestLocation ))
+        if( Utils.isBetterLocation( location, currentBestLocation ))
             currentBestLocation = location;
 
         if(BuildConfig.DEBUG ) {

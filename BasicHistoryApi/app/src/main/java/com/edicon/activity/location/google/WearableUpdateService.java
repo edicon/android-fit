@@ -1,4 +1,4 @@
-package com.edicon.activity.location.db;
+package com.edicon.activity.location.google;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -15,10 +15,10 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 
-import com.edicon.activity.location.LocationDataManager;
+import com.edicon.activity.location.db.LocationDataManager;
 import com.edicon.activity.ActivityApplication;
-import com.edicon.activity.location.Constants;
-import com.edicon.activity.location.LocationEntry;
+import com.edicon.activity.common.Constants;
+import com.edicon.activity.common.LocationEntry;
 
 import java.util.Calendar;
 import java.util.HashSet;
@@ -28,8 +28,9 @@ import java.util.Set;
  * A {@link com.google.android.gms.wearable.WearableListenerService} that is responsible for
  * reading location data that gets added to the Data Layer storage.
  */
-public class UpdateService extends WearableListenerService
-        implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
+public class WearableUpdateService extends WearableListenerService implements
+        GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener,
         ResultCallback<DataApi.DeleteDataItemsResult> {
 
     private static final String TAG = "UpdateService";
@@ -56,23 +57,22 @@ public class UpdateService extends WearableListenerService
     public void onDataChanged(DataEventBuffer dataEvents) {
         for (DataEvent dataEvent : dataEvents) {
             if (dataEvent.getType() == DataEvent.TYPE_CHANGED) {
+
                 Uri dataItemUri = dataEvent.getDataItem().getUri();
                 if (Log.isLoggable(TAG, Log.DEBUG)) {
                     Log.d(TAG, "Received a data item with uri: " + dataItemUri.getPath());
                 }
+
                 if (dataItemUri.getPath().startsWith(Constants.PATH)) {
-                    DataMap dataMap = DataMapItem.fromDataItem(dataEvent.getDataItem())
-                            .getDataMap();
+                    DataMap dataMap = DataMapItem.fromDataItem(dataEvent.getDataItem()).getDataMap();
                     double longitude = dataMap.getDouble(Constants.KEY_LONGITUDE);
                     double latitude = dataMap.getDouble(Constants.KEY_LATITUDE);
                     long time = dataMap.getLong(Constants.KEY_TIME);
                     Calendar calendar = Calendar.getInstance();
                     calendar.setTimeInMillis(time);
-                    mDataManager.addPoint(
-                            new LocationEntry(calendar, latitude, longitude));
+                    mDataManager.addPoint( new LocationEntry(calendar, latitude, longitude));
                     if (mGoogleApiClient.isConnected()) {
-                        Wearable.DataApi.deleteDataItems(
-                                mGoogleApiClient, dataItemUri).setResultCallback(this);
+                        Wearable.DataApi.deleteDataItems( mGoogleApiClient, dataItemUri).setResultCallback(this);
                     } else {
                         synchronized (mToBeDeletedUris) {
                             mToBeDeletedUris.add(dataItemUri);
@@ -91,8 +91,7 @@ public class UpdateService extends WearableListenerService
         synchronized (mToBeDeletedUris) {
             if (!mToBeDeletedUris.isEmpty()) {
                 for (Uri dataItemUri : mToBeDeletedUris) {
-                    Wearable.DataApi.deleteDataItems(
-                            mGoogleApiClient, dataItemUri).setResultCallback(this);
+                    Wearable.DataApi.deleteDataItems( mGoogleApiClient, dataItemUri).setResultCallback(this);
                 }
             }
         }

@@ -1,4 +1,4 @@
-package com.edicon.activity.location;
+package com.edicon.activity.common;
 
 import android.location.Location;
 import java.util.Calendar;

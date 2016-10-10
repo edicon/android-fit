@@ -2,7 +2,7 @@ package com.edicon.activity;
 
 import android.app.Application;
 
-import com.edicon.activity.location.LocationDataManager;
+import com.edicon.activity.location.db.LocationDataManager;
 import com.edicon.activity.location.db.LocationDbHelper;
 
 /**
@@ -20,7 +20,7 @@ public class ActivityApplication extends Application {
     }
 
     /**
-     * Returns an instance of {@link com.edicon.activity.location.LocationDataManager}.
+     * Returns an instance of {@link LocationDataManager}.
      */
     public final LocationDataManager getDataManager() {
         return mDataManager;
