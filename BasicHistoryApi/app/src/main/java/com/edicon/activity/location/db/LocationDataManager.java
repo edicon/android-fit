@@ -1,6 +1,6 @@
 package com.edicon.activity.location.db;
 
-import com.edicon.activity.common.LocationEntry;
+import com.edicon.activity.location.LocationEntry;
 import com.edicon.activity.common.Utils;
 
 import java.util.ArrayList;

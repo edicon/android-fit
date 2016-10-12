@@ -119,7 +119,7 @@ public class HistoryActivity extends AppCompatActivity {
             }
         }
 
-        LocationService locationService = LocationService.getLocationService( this );
+        // LocationService locationService = LocationService.getLocationService( this );
 
         buildFitnessClient();
         // buildSensorListener();

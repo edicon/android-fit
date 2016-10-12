@@ -37,6 +37,8 @@ import com.google.android.gms.fit.samples.basichistoryapi.R;
  */
 public abstract class PermUtils {
 
+    public static final int MY_ACCESS_FINE_LOCATION = 4000;
+
     public static boolean checkMyPermission( Context context ) {
         if ( Build.VERSION.SDK_INT >= 23 &&
                 ContextCompat.checkSelfPermission( context, android.Manifest.permission.ACCESS_FINE_LOCATION ) != PackageManager.PERMISSION_GRANTED &&

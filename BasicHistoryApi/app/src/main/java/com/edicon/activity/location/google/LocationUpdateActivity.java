@@ -17,93 +17,59 @@ package com.edicon.activity.location.google;
 
 import android.Manifest;
 import android.content.Intent;
-import android.content.IntentSender;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.location.Location;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.design.widget.Snackbar;
+import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.view.Menu;
-import android.view.MenuItem;
 
 import com.edicon.activity.ActivityApplication;
-import com.edicon.activity.common.Constants;
-import com.edicon.activity.common.LocationEntry;
 import com.edicon.activity.common.logger.Log;
-import com.edicon.activity.common.logger.LogView;
-import com.edicon.activity.common.logger.LogWrapper;
-import com.edicon.activity.common.logger.MessageOnlyLogFilter;
-import com.edicon.activity.location.android.LocationService;
 import com.edicon.activity.location.db.LocationDataManager;
 import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesUtil;
-import com.google.android.gms.common.Scopes;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
-import com.google.android.gms.common.api.PendingResult;
-import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.common.api.Scope;
-import com.google.android.gms.common.api.Status;
-import com.google.android.gms.fit.samples.basichistoryapi.BuildConfig;
-import com.google.android.gms.fit.samples.basichistoryapi.MainActivity2;
 import com.google.android.gms.fit.samples.basichistoryapi.R;
-import com.google.android.gms.fitness.Fitness;
-import com.google.android.gms.fitness.FitnessStatusCodes;
-import com.google.android.gms.fitness.data.Bucket;
-import com.google.android.gms.fitness.data.DataPoint;
-import com.google.android.gms.fitness.data.DataSet;
-import com.google.android.gms.fitness.data.DataSource;
-import com.google.android.gms.fitness.data.DataType;
-import com.google.android.gms.fitness.data.Field;
-import com.google.android.gms.fitness.data.Value;
-import com.google.android.gms.fitness.request.DataDeleteRequest;
-import com.google.android.gms.fitness.request.DataReadRequest;
-import com.google.android.gms.fitness.result.DailyTotalResult;
-import com.google.android.gms.fitness.result.DataReadResult;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
 import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 
-import static java.text.DateFormat.getDateInstance;
-import static java.text.DateFormat.getTimeInstance;
+import static com.edicon.activity.common.PermUtils.MY_ACCESS_FINE_LOCATION;
+import static com.edicon.activity.common.Utils.initializeLogging;
+import static com.edicon.activity.common.Utils.isGooglePlayServicesAvailable;
+import static com.edicon.activity.location.LocUtils.FASTEST_INTERVAL;
+import static com.edicon.activity.location.LocUtils.INTERVAL;
+import static com.edicon.activity.location.LocUtils.createLocationRequest;
+import static com.edicon.activity.location.LocUtils.getLastLocation;
+import static com.edicon.activity.location.LocUtils.startLocationUpdates;
+import static com.edicon.activity.location.LocUtils.stopLocationUpdates;
+import static com.edicon.activity.map.MapUtils.saveLocation;
 
-public class LocationUpdateActivity extends AppCompatActivity  implements
-        LocationListener,
-        GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener {
+public class LocationUpdateActivity extends AppCompatActivity {
+
     public static final String TAG = "GoogleLocation";
     private static final int REQUEST_OAUTH = 1;
 
-    private static final long INTERVAL = 1000 * 10;
-    private static final long FASTEST_INTERVAL = 1000 * 5;
-    private static Location mCurrentLocation;
-    private static LocationRequest mLocationRequest;
     private static GoogleApiClient mClient = null;
-    private static String mLastUpdateTime;
+    private static String lastUpdateTime;
+    private static Location lastLocation, currentLocation;
+    private static LocationRequest locationRequest;
     private LocationDataManager mDataManager;
 
     private static AppCompatActivity thisActivity;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        initializeLogging();
         thisActivity = this;
+        initializeLogging( thisActivity );
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ) {
             if (!(checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)) {
@@ -118,15 +84,15 @@ public class LocationUpdateActivity extends AppCompatActivity  implements
             }
         }
 
-        if (!isGooglePlayServicesAvailable()) {
+        if (!isGooglePlayServicesAvailable( thisActivity )) {
             finish();
         }
 
-        createLocationRequest();
+        locationRequest = createLocationRequest( INTERVAL, FASTEST_INTERVAL );
         mClient = new GoogleApiClient.Builder(this)
                 .addApi(LocationServices.API)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
+                .addConnectionCallbacks( clientConnectionCallbacks )
+                .addOnConnectionFailedListener( clientConnectionFailedListener )
                 .build();
 
         setContentView(R.layout.activity_main);
@@ -144,11 +110,67 @@ public class LocationUpdateActivity extends AppCompatActivity  implements
         mDataManager = ((ActivityApplication) getApplicationContext()).getDataManager();
     }
 
-    protected void createLocationRequest() {
-        mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(INTERVAL);
-        mLocationRequest.setFastestInterval(FASTEST_INTERVAL);
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+
+    private GoogleApiClient.ConnectionCallbacks clientConnectionCallbacks = new GoogleApiClient.ConnectionCallbacks() {
+        @Override
+        public void onConnected(@Nullable Bundle bundle) {
+            Log.d(TAG, "onConnected: " + mClient.isConnected());
+
+            lastLocation = getLastLocation( mClient );
+            startLocationUpdates( mClient, locationRequest, locationListener);
+        }
+
+        @Override
+        public void onConnectionSuspended(int i) {
+
+        }
+    };
+
+    private GoogleApiClient.OnConnectionFailedListener clientConnectionFailedListener = new GoogleApiClient.OnConnectionFailedListener() {
+        @Override
+        public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+            Log.d(TAG, "Connection failed: " + connectionResult.toString());
+        }
+    };
+
+    private LocationListener locationListener = new LocationListener() {
+        @Override
+        public void onLocationChanged(Location location) {
+            Log.d(TAG, " --> onLocationChanged");
+            currentLocation = location;
+            lastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+            updateUI();
+        }
+    };
+
+    private void updateUI() {
+        Log.d(TAG, "UI update initiated .............");
+        if (null != currentLocation) {
+            String lat = String.valueOf(currentLocation.getLatitude());
+            String lng = String.valueOf(currentLocation.getLongitude());
+        } else {
+            Log.d(TAG, "location is null ...............");
+        }
+
+        double latitude = currentLocation.getLatitude();
+        double longitude = currentLocation.getLongitude();
+        saveLocation( mDataManager, latitude, longitude);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (mClient.isConnected()) {
+            startLocationUpdates( mClient, locationRequest, locationListener);
+            Log.d(TAG, "Location update resumed");
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopLocationUpdates( mClient, locationListener );
     }
 
     @Override
@@ -169,121 +191,6 @@ public class LocationUpdateActivity extends AppCompatActivity  implements
         Log.d(TAG, " --> mClient.disconnect");
     }
 
-    private boolean isGooglePlayServicesAvailable() {
-        int status = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
-        if (ConnectionResult.SUCCESS == status) {
-            return true;
-        } else {
-            GooglePlayServicesUtil.getErrorDialog(status, this, 0).show();
-            return false;
-        }
-    }
-
-    @Override
-    public void onConnected(Bundle bundle) {
-        Log.d(TAG, "onConnected: " + mClient.isConnected());
-
-        startLocationUpdates();
-    }
-
-    private void startLocationUpdates() {
-        Log.d(TAG, "Location update started: ");
-        try {
-            PendingResult<Status> pendingResult = LocationServices.FusedLocationApi.requestLocationUpdates( mClient, mLocationRequest, this);
-        } catch ( SecurityException e ) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void onConnectionSuspended(int i) {
-    }
-
-    @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
-        Log.d(TAG, "Connection failed: " + connectionResult.toString());
-    }
-
-    @Override
-    public void onLocationChanged(Location location) {
-        Log.d(TAG, " --> onLocationChanged");
-        mCurrentLocation = location;
-        mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-        updateUI();
-    }
-
-    private void updateUI() {
-        Log.d(TAG, "UI update initiated .............");
-        if (null != mCurrentLocation) {
-            String lat = String.valueOf(mCurrentLocation.getLatitude());
-            String lng = String.valueOf(mCurrentLocation.getLongitude());
-        } else {
-            Log.d(TAG, "location is null ...............");
-        }
-
-        double latitude = mCurrentLocation.getLatitude();
-        double longitude = mCurrentLocation.getLongitude();
-        saveLocation( latitude, longitude);
-    }
-
-    public void saveLocation( double latitude, double longitude) {
-        Calendar cal = Calendar.getInstance();
-        long time = cal.getTimeInMillis();
-        cal.setTimeInMillis(time);
-
-        mDataManager.addPoint( new LocationEntry(cal, latitude, longitude));
-
-        if(BuildConfig.DEBUG ) {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            String timeStr = sdf.format(cal.getTime());
-            Log.d(TAG, "Location is saved: " + timeStr );
-        }
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        stopLocationUpdates();
-    }
-
-    protected void stopLocationUpdates() {
-        LocationServices.FusedLocationApi.removeLocationUpdates( mClient, this);
-        Log.d(TAG, "Location update stopped");
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        if (mClient.isConnected()) {
-            startLocationUpdates();
-            Log.d(TAG, "Location update resumed");
-        }
-    }
-
-    /**
-     *  Initialize a custom log class that outputs both to in-app targets and logcat.
-     */
-    private void initializeLogging() {
-        // Wraps Android's native log framework.
-        LogWrapper logWrapper = new LogWrapper();
-        // Using Log, front-end to the logging chain, emulates android.util.log method signatures.
-        Log.setLogNode(logWrapper);
-        // Filter strips out everything except the message text.
-        MessageOnlyLogFilter msgFilter = new MessageOnlyLogFilter();
-        logWrapper.setNext(msgFilter);
-        // On screen logging via a customized TextView.
-        LogView logView = (LogView) findViewById(R.id.sample_logview);
-
-        // Fixing this lint error adds logic without benefit.
-        //noinspection AndroidLintDeprecation
-        logView.setTextAppearance(this, R.style.Log);
-
-        logView.setBackgroundColor(Color.WHITE);
-        msgFilter.setNext(logView);
-        Log.i(TAG, "Ready.");
-    }
-
-    private final int MY_ACCESS_FINE_LOCATION = 100;
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         switch (requestCode) {

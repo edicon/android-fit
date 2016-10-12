@@ -1,9 +1,11 @@
-package com.edicon.activity.common;
+package com.edicon.activity.location;
 
 /**
  * A collection of constants that is shared between teh wearable and handset apps.
  */
 public class Constants {
+
+    public static final boolean USE_GOOGLE_LOC_API = true;
 
     public static final String PATH = "/location";
     public static final String KEY_LONGITUDE = "lng";

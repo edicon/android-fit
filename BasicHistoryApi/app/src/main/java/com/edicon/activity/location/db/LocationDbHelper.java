@@ -8,7 +8,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
-import com.edicon.activity.common.LocationEntry;
+import com.edicon.activity.location.LocationEntry;
 import com.edicon.activity.common.Utils;
 
 import java.util.ArrayList;

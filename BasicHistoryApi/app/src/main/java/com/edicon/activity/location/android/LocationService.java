@@ -6,11 +6,11 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 
-import com.edicon.activity.common.Utils;
-import com.google.android.gms.fit.samples.basichistoryapi.BuildConfig;
 import com.edicon.activity.common.logger.Log;
+import com.google.android.gms.fit.samples.basichistoryapi.BuildConfig;
 
 import static com.edicon.activity.common.PermUtils.checkMyPermission;
+import static com.edicon.activity.location.LocUtils.isBetterLocation;
 
 // Google Play Location Service or Android platform location APIs
 // http://stackoverflow.com/questions/21397177/finding-location-google-play-location-service-or-android-platform-location-api
@@ -139,7 +139,7 @@ public class LocationService  {
 
     private static void updateLocation( Location location ) {
        // ToDo: Save to local db or firebase
-        if( Utils.isBetterLocation( location, currentBestLocation ))
+        if( isBetterLocation( location, currentBestLocation ))
             currentBestLocation = location;
 
         if(BuildConfig.DEBUG ) {

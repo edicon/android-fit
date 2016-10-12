@@ -1,4 +1,4 @@
-package com.edicon.activity.common;
+package com.edicon.activity.location;
 
 import java.util.Calendar;
 
@@ -17,7 +17,7 @@ public class LocationEntry {
         this.calendar = calendar;
         this.latitude = latitude;
         this.longitude = longitude;
-        this.day = Utils.getHashedDay(calendar);
+        this.day = com.edicon.activity.common.Utils.getHashedDay(calendar);
     }
 
     @Override
