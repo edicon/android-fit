@@ -29,6 +29,7 @@ limitations under the License.
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
     <application
+        android:name="com.edicon.activity.ActivityApplication"
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:icon="@drawable/ic_launcher"
@@ -114,7 +115,7 @@ limitations under the License.
             </intent-filter>
         </activity>
         <activity
-            android:name="com.edicon.activity.location.TrackingActivity"
+            android:name="com.edicon.activity.TrackingActivity"
             android:label="@string/app_track">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

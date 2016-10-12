@@ -17,8 +17,8 @@ import android.util.Log;
 
 import com.edicon.activity.location.db.LocationDataManager;
 import com.edicon.activity.ActivityApplication;
-import com.edicon.activity.common.Constants;
-import com.edicon.activity.common.LocationEntry;
+import com.edicon.activity.location.Constants;
+import com.edicon.activity.location.LocationEntry;
 
 import java.util.Calendar;
 import java.util.HashSet;
