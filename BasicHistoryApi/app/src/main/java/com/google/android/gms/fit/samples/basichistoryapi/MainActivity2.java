@@ -18,6 +18,7 @@ package com.google.android.gms.fit.samples.basichistoryapi;
 import android.os.AsyncTask;
 import android.os.Bundle;
 
+import com.edicon.activity.fit.FitHistory;
 import com.edicon.activity.fit.HistoryActivity;
 import com.edicon.activity.common.logger.Log;
 import com.google.android.gms.fitness.Fitness;
@@ -90,12 +91,12 @@ public class MainActivity2 extends HistoryActivity {
             // [END update_data_request]
 
             // Create the query.
-            DataReadRequest readRequest = queryFitnessData();
+            DataReadRequest readRequest = FitHistory.queryFitnessData();
 
             DataReadResult dataReadResult =
                     Fitness.HistoryApi.readData(mClient, readRequest).await(1, TimeUnit.MINUTES);
 
-            printData(dataReadResult);
+            FitHistory.printFitData(dataReadResult);
 
             return null;
         }

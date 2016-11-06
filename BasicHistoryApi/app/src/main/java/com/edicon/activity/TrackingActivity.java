@@ -1,5 +1,6 @@
 package com.edicon.activity;
 
+import com.edicon.activity.fit.FitHistory;
 import com.edicon.activity.location.LocationEntry;
 import com.edicon.activity.location.android.LocationService;
 import com.edicon.activity.location.db.LocationDataManager;
@@ -68,7 +69,7 @@ public class TrackingActivity extends AppCompatActivity implements
         DatePickerDialog.OnDateSetListener {
 
     private static final String TAG = "TrackingActivity";
-    private static final int BOUNDING_BOX_PADDING_PX = 50;
+    public static final int BOUNDING_BOX_PADDING_PX = 50;
     private TextView mSelectedDateText;
 
     // Google API
@@ -216,7 +217,13 @@ public class TrackingActivity extends AppCompatActivity implements
             calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
             String date = DateUtils.formatDateTime(this, calendar.getTimeInMillis(), DateUtils.FORMAT_SHOW_DATE);
             mSelectedDateText.setText(getString(R.string.showing_for_date, date));
-            showTrack(calendar);
+
+            if( false )
+                showTrack(calendar);
+            else {
+                FitHistory fitHistory = new FitHistory(thisActivity);
+                fitHistory.buildFitnessClient( mMap );
+            }
         }
     }
 
