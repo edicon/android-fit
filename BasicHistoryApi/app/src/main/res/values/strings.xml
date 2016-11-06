@@ -16,7 +16,7 @@
   -->
 <resources>
 
-    <string name="app_name">FitActivity</string>
+    <string name="app_name">FitUpdateActivity</string>
     <string name="app_history">FitHistory</string>
     <string name="app_record">FitRecord</string>
     <string name="app_sonsor">FitSensor</string>
@@ -27,6 +27,7 @@
     <string name="app_loc_update">MapLocUpdate</string>
     <string name="app_track">MapTracking</string>
     <string name="intro_text">Behold, a data dump from the Fitness API! Check the menu for more actions!</string>
+    <string name="action_location_session">Query location data</string>
     <string name="action_update_session">Update step count data</string>
     <string name="action_delete_session">Delete step count data</string>
     <string name="action_settings">Settings</string>

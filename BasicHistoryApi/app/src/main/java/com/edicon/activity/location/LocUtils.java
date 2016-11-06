@@ -126,7 +126,9 @@ public class LocUtils {
     }
 
     public static void stopLocationUpdates( GoogleApiClient mClient, LocationListener locationListener) {
-        LocationServices.FusedLocationApi.removeLocationUpdates( mClient, locationListener);
-        Log.d(TAG, "Location update stopped");
+        if( mClient != null && mClient.isConnected()) {
+            LocationServices.FusedLocationApi.removeLocationUpdates(mClient, locationListener);
+            Log.d(TAG, "Location update stopped");
+        }
     }
 }

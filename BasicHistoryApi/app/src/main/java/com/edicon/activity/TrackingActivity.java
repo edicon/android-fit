@@ -190,6 +190,9 @@ public class TrackingActivity extends AppCompatActivity implements
             LatLng latLng = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
             gotoLoc(mMap, latLng, "Last Location");
         }
+
+        if( fitHistory == null )
+            fitHistory = new FitHistory(thisActivity, mMap );
     }
 
     private void gotoLoc( GoogleMap map, LatLng latLng, String title) {
@@ -205,6 +208,7 @@ public class TrackingActivity extends AppCompatActivity implements
                 calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show();
     }
 
+    private FitHistory fitHistory;
     @Override
     public void onDateSet(DatePicker view, int year, int monthOfYear, int dayOfMonth) {
         // the following if-clause is to get around a bug that causes this callback to be called
@@ -221,8 +225,9 @@ public class TrackingActivity extends AppCompatActivity implements
             if( false )
                 showTrack(calendar);
             else {
-                FitHistory fitHistory = new FitHistory(thisActivity);
-                fitHistory.buildFitnessClient( mMap );
+                if( fitHistory == null )
+                    fitHistory = new FitHistory(thisActivity, mMap );
+                fitHistory.startTrackingDataTask( calendar );
             }
         }
     }

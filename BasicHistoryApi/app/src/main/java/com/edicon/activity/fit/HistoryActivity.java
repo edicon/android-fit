@@ -31,9 +31,11 @@ import com.edicon.activity.common.logger.LogView;
 import com.edicon.activity.common.logger.LogWrapper;
 import com.edicon.activity.common.logger.MessageOnlyLogFilter;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.fit.samples.basichistoryapi.MainActivity2;
+import com.google.android.gms.fit.samples.basichistoryapi.FitUpdateActivity;
 import com.google.android.gms.fit.samples.basichistoryapi.R;
 import com.google.android.gms.fitness.data.DataSet;
+
+import java.util.Calendar;
 
 import static com.edicon.activity.common.Utils.REQUEST_OAUTH;
 import static com.edicon.activity.common.Utils.REQUEST_RESOLVE_ERROR;
@@ -89,8 +91,10 @@ public class HistoryActivity extends AppCompatActivity {
 
         // LocationService locationService = LocationService.getLocationService( this );
 
-        fitHistory = new FitHistory( thisActivity );
-        fitHistory.buildFitnessClient( null );
+        Calendar today = FitHistory.getTodayCalendar();
+        fitHistory = new FitHistory( thisActivity, null ); // Activity/Map
+        // Wait to connecting
+        // fitHistory.startTrackingDataTask( today );
         // buildSensorListener();
     }
 
@@ -104,11 +108,17 @@ public class HistoryActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.action_delete_data) {
+        if (id == R.id.action_location_data) {
+            Calendar today = FitHistory.getTodayCalendar();
+            if( fitHistory == null )
+                fitHistory = new FitHistory( thisActivity, null ); // Activity/Map
+            fitHistory.startTrackingDataTask( today );
+            return true;
+        } else if (id == R.id.action_delete_data) {
             fitHistory.deleteData();
             return true;
         } else if (id == R.id.action_update_data){
-            Intent intent = new Intent(HistoryActivity.this, MainActivity2.class);
+            Intent intent = new Intent(HistoryActivity.this, FitUpdateActivity.class);
             HistoryActivity.this.startActivity(intent);
         }
         return super.onOptionsItemSelected(item);

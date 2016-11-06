@@ -15,6 +15,7 @@
  */
 package com.edicon.activity.fit;
 
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -48,6 +49,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.text.DateFormat;
@@ -61,30 +63,23 @@ import static com.edicon.activity.common.Utils.handleConnectionFailed;
 import static java.text.DateFormat.getDateInstance;
 import static java.text.DateFormat.getTimeInstance;
 
-/**
- * This sample demonstrates how to use the History API of the Google Fit platform to insert data,
- * query against existing data, and remove data. It also demonstrates how to authenticate
- * a user with Google Play Services and how to properly represent data in a {@link DataSet}.
- */
 public class FitHistory {
 
     public static final String TAG = "FitHistory";
 
-    /**
-     *  Track whether an authorization activity is stacking over the current activity, i.e. when
-     *  a known auth error is being resolved, such as showing the account chooser or presenting a
-     *  consent dialog. This avoids common duplications as might happen on screen rotations, etc.
-     */
-    private static AppCompatActivity thisActivity;
+    private static final int SKIP_TIME_INTERVAL_SECOND = 5; // *1000;
+    private AppCompatActivity thisActivity;
     private static GoogleMap thisMap;
+    private static GoogleApiClient mClient;
 
     public FitHistory() {}
 
-    public static GoogleApiClient mClient = null;
-    public FitHistory(AppCompatActivity activity ) {
+    public FitHistory(AppCompatActivity activity, GoogleMap map ) {
 
         thisActivity = activity;
-        // buildFitnessClient();
+        thisMap = map;
+
+        buildFitnessClient();
         // buildSensorListener();
     }
 
@@ -96,16 +91,7 @@ public class FitHistory {
      *  can address. Examples of this include the user never having signed in before, or
      *  having multiple accounts on the device and needing to specify which account to use, etc.
      */
-    public void buildFitnessClient( GoogleMap map ) {
-        if( mClient != null && mClient.isConnected() ) {
-            DataReadRequest readRequest;
-            // readRequest = queryFitnessData();
-            readRequest = queryLocationData();
-            new queryFitDataTask().execute( readRequest );
-            return;
-        }
-
-        thisMap = map;
+    public void buildFitnessClient() {
         mClient = new GoogleApiClient.Builder(thisActivity)
                 .addApi(Fitness.HISTORY_API)
                 .useDefaultAccount()                    // setAccountName( String )
@@ -118,17 +104,6 @@ public class FitHistory {
                             @Override
                             public void onConnected(Bundle bundle) {
                                 Log.i(TAG, "Google Service: Connected!!!");
-                                // Now you can make calls to the Fitness APIs.  What to do?
-                                boolean query = true;
-
-                                boolean queryLocation = true;
-                                DataReadRequest readRequest;
-                                if( queryLocation ) {
-                                    // readRequest = queryFitnessData();
-                                    readRequest = queryLocationData();
-                                    new queryFitDataTask().execute( readRequest );
-                                } else
-                                    new InsertAndVerifyDataTask().execute();
                             }
 
                             @Override
@@ -152,14 +127,145 @@ public class FitHistory {
                 .enableAutoManage(thisActivity, 0, new GoogleApiClient.OnConnectionFailedListener() {
                     @Override
                     public void onConnectionFailed(ConnectionResult result) {
-                        Log.i(TAG, "Google Play services connection failed. Cause: " + result.toString());
+                        Log.i(TAG, "Google Services: Failed: " + result.toString());
                         Snackbar.make(
                                 thisActivity.findViewById(R.id.main_activity_view),
-                                "Exception while connecting to Google Play services: " + result.getErrorMessage(),
+                                "Google services: Failed: " + result.getErrorMessage(),
                                 Snackbar.LENGTH_INDEFINITE).show();
                     }
                 })
                 .build();
+    }
+
+    public void startTrackingDataTask( Calendar cal ) {
+        if( mClient != null && mClient.isConnected() ) {
+            DataReadRequest readRequest;
+            readRequest = queryLocationData( cal );
+            new queryFitDataTask().execute( readRequest );
+            return;
+        }
+        Snackbar.make( thisActivity.findViewById(android.R.id.content), "Google Fit: NOT Connected", Snackbar.LENGTH_SHORT).show();
+    }
+
+    public void startFitDataTask( Calendar cal ) {
+        if( mClient != null && mClient.isConnected() ) {
+            DataReadRequest readRequest;
+            readRequest = queryFitnessData( cal );
+            new queryFitDataTask().execute( readRequest );
+            return;
+        }
+        Snackbar.make( thisActivity.findViewById(android.R.id.content), "Google Fit: NOT Connected", Snackbar.LENGTH_SHORT).show();
+    }
+
+    private static boolean PRINT_FIT_DATA_INFO = false;
+    private class queryFitDataTask extends AsyncTask<DataReadRequest, Void, DataReadResult> {
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+            if( !mClient.isConnected()) {
+                Snackbar.make( thisActivity.findViewById( android.R.id.content), "Google Service: NOT Connected", Snackbar.LENGTH_LONG ).show();
+                return;
+            }
+        }
+
+        protected DataReadResult doInBackground(DataReadRequest... params) {
+            Log.i(TAG, "START: queryFitData");
+
+            DataReadRequest readRequest = params[0];
+            DataReadResult dataReadResult = Fitness.HistoryApi.readData(mClient, readRequest).await(1, TimeUnit.MINUTES);
+
+            return dataReadResult;
+        }
+
+        @Override
+        protected void onPostExecute( DataReadResult dataReadResult) {
+            super.onPostExecute(dataReadResult);
+
+            PRINT_FIT_DATA_INFO = false;
+            parseFitData(dataReadResult);
+            Log.d(TAG, "Query Size: " + latLngList.size());
+
+            if( thisMap == null )
+                return;
+            if( latLngList.size() < 1 ) {
+                Snackbar.make( thisActivity.findViewById( android.R.id.content), "Google Fit: No Tracking Data", Snackbar.LENGTH_LONG ).show();
+                return;
+            }
+            thisMap.clear();
+            dispPolyline( thisMap, latLngList );
+        }
+    }
+
+    private void dispPolyline( GoogleMap thisMap, List<LatLng> latLngs ) {
+        LatLngBounds bounds;
+        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+        for (LatLng entry : latLngs) {
+            LatLng latLng = new LatLng(entry.latitude, entry.longitude);
+            builder.include(latLng);
+        }
+        bounds = builder.build();
+        PolylineOptions polylineOptions = new PolylineOptions()
+                .width(5)
+                .color(Color.RED)
+                .geodesic(true)
+                .clickable(true)
+                .addAll(latLngs);
+        thisMap.setOnPolylineClickListener(new GoogleMap.OnPolylineClickListener() {
+            @Override
+            public void onPolylineClick(Polyline polyline) {
+                // Flip the values of the r, g and b components of the polyline's color.
+                int strokeColor = polyline.getColor() ^ 0x00ffffff;
+                polyline.setColor(strokeColor);
+            }
+        });
+        thisMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, TrackingActivity.BOUNDING_BOX_PADDING_PX));
+        thisMap.addPolyline(polylineOptions);
+    }
+
+    public static DataReadRequest queryLocationData( Calendar cal ) {
+        long endTime = cal.getTimeInMillis();
+        cal.add(Calendar.DAY_OF_YEAR, -1);
+        // cal.add(Calendar.WEEK_OF_YEAR, -1);
+        long startTime = cal.getTimeInMillis();
+
+        DateFormat dateFormat = getDateInstance();
+        Log.i(TAG, "Start: " + dateFormat.format(startTime));
+        Log.i(TAG, "End:   " + dateFormat.format(endTime));
+
+        DataReadRequest readRequest = new DataReadRequest.Builder()
+                // The data request can specify multiple data types to return, effectively combining multiple data queries into one call.
+                // In this example, it's very unlikely that the request is for several hundred datapoints each consisting of a few steps and a timestamp.
+                // The more likely scenario is wanting to see how many steps were walked per day, for 7 days.
+                // .read(DataType.TYPE_LOCATION_TRACK)
+                .read(DataType.TYPE_LOCATION_SAMPLE)            // Detailed Request: Exact timestamp
+                // .aggregate(DataType.TYPE_LOCATION_SAMPLE,  DataType.AGGREGATE_LOCATION_BOUNDING_BOX) // Aggregated Request
+                // Analogous to a "Group By" in SQL, defines how data should be aggregated.
+                // bucketByTime allows for a time span, whereas bucketBySession would allow
+                // bucketing by "sessions", which would need to be defined in code.
+                // .bucketByTime(1, TimeUnit.HOURS) // .bucketByTime(1, TimeUnit.DAYS)
+                .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
+                .build();
+
+        return readRequest;
+    }
+
+    public static DataReadRequest queryFitnessData( Calendar cal ) {
+        long endTime = cal.getTimeInMillis();
+        cal.add(Calendar.WEEK_OF_YEAR, -1);         // a day per week
+        long startTime = cal.getTimeInMillis();
+
+        DateFormat dateFormat = getDateInstance();
+        Log.i(TAG, "Start: " + dateFormat.format(startTime));
+        Log.i(TAG, "End:   " + dateFormat.format(endTime));
+
+        DataReadRequest readRequest = new DataReadRequest.Builder()
+                //  ToDo: Add multi-type and filtering results
+                .aggregate(DataType.TYPE_STEP_COUNT_DELTA, DataType.AGGREGATE_STEP_COUNT_DELTA)
+                .bucketByTime(1, TimeUnit.DAYS)
+                .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
+                .build();
+        return readRequest;
     }
 
     /**
@@ -183,29 +289,19 @@ public class FitHistory {
             Log.i(TAG, "History: Inserting the dataset.");
             com.google.android.gms.common.api.Status insertStatus = Fitness.HistoryApi.insertData(mClient, dataSet).await(1, TimeUnit.MINUTES);
 
-            // Before querying the data, check to see if the insertion succeeded.
             if (!insertStatus.isSuccess()) {
                 Log.i(TAG, "FAIL: Inserting the dataset.");
                 return null;
             }
-
-            // At this point, the data has been inserted and can be read.
             Log.i(TAG, "OK: Inserting dataset.");
 
-            // Begin by creating the query.
-            DataReadRequest readRequest = queryFitnessData();
-
-            // Invoke the History API to fetch the data with the query and await the result of
-            // the read request.
+            DataReadRequest readRequest = queryFitnessData(getTodayCalendar());
             DataReadResult dataReadResult = Fitness.HistoryApi.readData(mClient, readRequest).await(1, TimeUnit.MINUTES);
+            parseFitData(dataReadResult);
 
-            // For the sake of the sample, we'll print the data so we can see what we just added.
-            // In general, logging fitness information should be avoided for privacy reasons.
-            printFitData(dataReadResult);
-
-            readRequest = queryLocationData();
+            readRequest = queryLocationData( FitHistory.getTodayCalendar());
             dataReadResult = Fitness.HistoryApi.readData(mClient, readRequest).await(1, TimeUnit.MINUTES);
-            printFitData(dataReadResult);
+            parseFitData(dataReadResult);
 
             return null;
         }
@@ -217,7 +313,6 @@ public class FitHistory {
     private DataSet insertFitnessData() {
         Log.i(TAG, "Insert request.");
 
-        // [START build_insert_data_request]
         // Set a start and end time for our data, using a start time of 1 hour before this moment.
         Calendar cal = Calendar.getInstance();
         Date now = new Date();
@@ -247,97 +342,6 @@ public class FitHistory {
         return dataSet;
     }
 
-    private static boolean PRINT_FIT_DATA_INFO = false;
-    private class queryFitDataTask extends AsyncTask<DataReadRequest, Void, DataReadResult> {
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-
-            if( mClient.isConnected())
-                Snackbar.make( thisActivity.findViewById( android.R.id.content), "Start: Query Fit Data", Snackbar.LENGTH_LONG ).show();
-            else {
-                Snackbar.make( thisActivity.findViewById( android.R.id.content), "Google Service: NOT Connected", Snackbar.LENGTH_LONG ).show();
-                return;
-            }
-        }
-
-        protected DataReadResult doInBackground(DataReadRequest... params) {
-
-            Log.i(TAG, "START: queryFitData");
-
-            DataReadRequest readRequest = params[0];
-            DataReadResult dataReadResult = Fitness.HistoryApi.readData(mClient, readRequest).await(1, TimeUnit.MINUTES);
-
-            return dataReadResult;
-        }
-
-        @Override
-        protected void onPostExecute( DataReadResult dataReadResult) {
-            super.onPostExecute(dataReadResult);
-
-            PRINT_FIT_DATA_INFO = false;
-            printFitData(dataReadResult);
-            Log.d(TAG, "Query Size: " + latLngList.size());
-
-            if( thisMap == null )
-                return;
-
-            thisMap.clear();
-            LatLngBounds bounds;
-            List<LatLng> coordinates = latLngList;
-            LatLngBounds.Builder builder = new LatLngBounds.Builder();
-            for (LatLng entry : coordinates) {
-                LatLng latLng = new LatLng(entry.latitude, entry.longitude);
-                builder.include(latLng);
-                // coordinates.add(latLng);
-            }
-            bounds = builder.build();
-            if (coordinates == null || coordinates.isEmpty()) {
-                if (android.util.Log.isLoggable(TAG, android.util.Log.DEBUG)) {
-                    android.util.Log.d(TAG, "No Entries found for that date");
-                }
-            } else {
-                thisMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, TrackingActivity.BOUNDING_BOX_PADDING_PX));
-                thisMap.addPolyline(new PolylineOptions().geodesic(true).addAll(coordinates));
-            }
-        }
-    }
-
-    /**
-     * Return a {@link DataReadRequest} for all step count changes in the past week.
-     */
-    public static DataReadRequest queryFitnessData() {
-        // [START build_read_data_request]
-        // Setting a start and end date using a range of 1 week before this moment.
-        Calendar cal = Calendar.getInstance();
-        Date now = new Date();
-        cal.setTime(now);
-        long endTime = cal.getTimeInMillis();
-        cal.add(Calendar.WEEK_OF_YEAR, -1);
-        long startTime = cal.getTimeInMillis();
-
-        DateFormat dateFormat = getDateInstance();
-        Log.i(TAG, "Start: " + dateFormat.format(startTime));
-        Log.i(TAG, "End:   " + dateFormat.format(endTime));
-
-        DataReadRequest readRequest = new DataReadRequest.Builder()
-                // The data request can specify multiple data types to return, effectively
-                // combining multiple data queries into one call.
-                // In this example, it's very unlikely that the request is for several hundred
-                // datapoints each consisting of a few steps and a timestamp.  The more likely
-                // scenario is wanting to see how many steps were walked per day, for 7 days.
-                .aggregate(DataType.TYPE_STEP_COUNT_DELTA, DataType.AGGREGATE_STEP_COUNT_DELTA)
-                        // Analogous to a "Group By" in SQL, defines how data should be aggregated.
-                        // bucketByTime allows for a time span, whereas bucketBySession would allow
-                        // bucketing by "sessions", which would need to be defined in code.
-                .bucketByTime(1, TimeUnit.DAYS)
-                .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
-                .build();
-        // [END build_read_data_request]
-
-        return readRequest;
-    }
-
     /**
      * Log a record of the query result. It's possible to get more constrained data sets by
      * specifying a data source or data type, but for demonstrative purposes here's how one would
@@ -346,7 +350,7 @@ public class FitHistory {
      * consideration. A better option would be to dump the data you receive to a local data
      * directory to avoid exposing it to other applications.
      */
-    public static void printFitData(DataReadResult dataReadResult) {
+    public static void parseFitData(DataReadResult dataReadResult) {
         // If the DataReadRequest object specified aggregated data, dataReadResult will be returned
         // as buckets containing DataSets, instead of just DataSets.
         if (dataReadResult.getBuckets().size() > 0) {
@@ -354,66 +358,46 @@ public class FitHistory {
             for (Bucket bucket : dataReadResult.getBuckets()) {
                 List<DataSet> dataSets = bucket.getDataSets();
                 for (DataSet dataSet : dataSets) {
-                    dumpDataSet(dataSet);
+                    parseDataSet(dataSet);
                 }
             }
         } else if (dataReadResult.getDataSets().size() > 0) {
             Log.i(TAG, "DataSets is: " + dataReadResult.getDataSets().size());
             for (DataSet dataSet : dataReadResult.getDataSets()) {
-                dumpDataSet(dataSet);
+                parseDataSet(dataSet);
             }
         }
     }
 
-    private static void dumpDataSet(DataSet dataSet) {
-        Log.i(TAG, "Data type: " + dataSet.getDataType().getName());
+    private static void parseDataSet(DataSet dataSet) {
 
-        DataType dataType = dataSet.getDataType();
-        if( dataType.equals(DataType.TYPE_STEP_COUNT_DELTA) ||  dataType.equals(DataType.AGGREGATE_STEP_COUNT_DELTA))
-            dumpStepData(dataSet);
-        else if( dataType.equals(DataType.TYPE_LOCATION_SAMPLE) ||  dataType.equals( DataType.AGGREGATE_LOCATION_BOUNDING_BOX )) {
-            dumpLocationData(dataSet);
-        } else
-            dumpStepData(dataSet);
+        latLngList.clear();
+
+        if( dataSet.getDataType().equals(DataType.TYPE_LOCATION_SAMPLE ))
+            parseLocationData( dataSet );
+        else if( dataSet.getDataType().equals(DataType.TYPE_STEP_COUNT_DELTA ))
+            parseStepCount( dataSet );
+        else
+            parseStepCount( dataSet );
     }
 
-    private static void dumpStepData(DataSet dataSet) {
-        DateFormat dateFormat = getTimeInstance();
-
-        int i = 0;
-        for (DataPoint dp : dataSet.getDataPoints()) {
-            Log.i(TAG, "DataPoint:"     + i++);
-            Log.i(TAG, "\tDataSource: " + dp.getOriginalDataSource().getAppPackageName());
-            Log.i(TAG, "\tType:  "      + dp.getDataType().getName());
-            Log.i(TAG, "\tStart: "      + dateFormat.format(dp.getStartTime(TimeUnit.MILLISECONDS)));
-            Log.i(TAG, "\tEnd:   "      + dateFormat.format(dp.getEndTime(TimeUnit.MILLISECONDS)));
-            for(Field field : dp.getDataType().getFields()) {
-                Log.i(TAG, "\t" + field.getName() + ": " + dp.getValue(field));
-            }
-        }
-    }
-
-
-    private static ArrayList<LatLng> latLngList = new ArrayList<LatLng>();
     // http://stackoverflow.com/questions/32373465/get-current-activity-from-google-fit-api-android?rq=1
-    private static void dumpLocationData(DataSet dataSet) {
-        DateFormat dateFormat = getTimeInstance();
-
+    private static ArrayList<LatLng> latLngList = new ArrayList<LatLng>();
+    private static void parseLocationData( DataSet dataSet) {
         int i = 0;
         float lat = 0.0f, lng = 0.0f, alt, acc;
-        latLngList.clear();
-        for (DataPoint dp : dataSet.getDataPoints()) {
-            if( PRINT_FIT_DATA_INFO ) {
-                Log.i(TAG, "DataPoint: " + i++);
-                Log.i(TAG, "\tDataSource: " + dp.getOriginalDataSource().getAppPackageName());
-                Log.i(TAG, "\tType:  " + dp.getDataType().getName());
-                Log.i(TAG, "\tStart: " + dateFormat.format(dp.getStartTime(TimeUnit.MILLISECONDS)));
-                Log.i(TAG, "\tEnd:   " + dateFormat.format(dp.getEndTime(TimeUnit.MILLISECONDS)));
-            }
-            for(Field field : dp.getDataType().getFields()) {
-                if( PRINT_FIT_DATA_INFO )
-                    Log.i(TAG, "\t" + field.getName() + ": " + (field.getFormat() == Field.FORMAT_FLOAT ? dp.getValue(field).asFloat() : dp.getValue(field)));
 
+        long prevTimeStamp = 0, currTimeStamp;
+        for (DataPoint dp : dataSet.getDataPoints()) {
+            dumpDataPoint( i++, dp );       // Dump DataPoint
+            // ToDo: Skip when query or Check Time Interval
+            currTimeStamp = dp.getTimestamp(TimeUnit.SECONDS);
+            if( currTimeStamp < (prevTimeStamp + SKIP_TIME_INTERVAL_SECOND))
+                continue;
+            prevTimeStamp = currTimeStamp;
+
+            for(Field field : dp.getDataType().getFields()) {
+                dumpField( dp, field );     // Dump Field
                 if( field.equals(Field.FIELD_LATITUDE) && (field.getFormat() == Field.FORMAT_FLOAT ))
                     lat = dp.getValue(field).asFloat();
                 else if( field.equals(Field.FIELD_LONGITUDE) && (field.getFormat() == Field.FORMAT_FLOAT ))
@@ -423,48 +407,52 @@ public class FitHistory {
                 else if ( field.equals(Field.FIELD_ACCURACY))
                     acc = dp.getValue(field).asFloat();
             }
-            if( dp.getDataType().equals(DataType.TYPE_LOCATION_SAMPLE)) {
-                LatLng latLng = new LatLng(lat, lng);
-                latLngList.add(latLng);
+            LatLng latLng = new LatLng(lat, lng);
+            latLngList.add(latLng);
+        }
+    }
+
+    private static int stepDelta;
+    private static void parseStepCount( DataSet dataSet) {
+        int i = 0;
+        String fitData;
+
+        for (DataPoint dp : dataSet.getDataPoints()) {
+            dumpDataPoint(i++, dp);     // Dump DataPoint
+            for (Field field : dp.getDataType().getFields()) {
+                dumpField(dp, field); // Dump Field
+                if (field.equals(Field.FIELD_STEPS) && (field.getFormat() == Field.FORMAT_INT32))
+                    stepDelta = dp.getValue(field).asInt();
+                else if (field.getFormat() == Field.FORMAT_STRING)
+                    fitData = dp.getValue(field).asString();
             }
         }
     }
 
+    private static void dumpDataPoint( int i, DataPoint dp ) {
+        DateFormat dateFormat = getTimeInstance();
+        if( PRINT_FIT_DATA_INFO ) {
+            Log.i(TAG, "DataPoint: " + i);
+            Log.i(TAG, "\tDataSource: " + dp.getOriginalDataSource().getAppPackageName());
+            Log.i(TAG, "\tType:  "      + dp.getDataType().getName());
+            Log.i(TAG, "\tStart: "      + dateFormat.format(dp.getStartTime(TimeUnit.MILLISECONDS)));
+            Log.i(TAG, "\tEnd:   "      + dateFormat.format(dp.getEndTime(TimeUnit.MILLISECONDS)));
+            Log.i(TAG, "\tTimeStamp: "  + dateFormat.format(dp.getTimestamp(TimeUnit.MILLISECONDS)));
+        }
+    }
 
-    public static DataReadRequest queryLocationData() {
-        // [START build_read_data_request]
-        // Setting a start and end date using a range of 1 week before this moment.
+    private static void dumpField( DataPoint dp, Field field ) {
+        if( PRINT_FIT_DATA_INFO ) {
+            Log.i(TAG, "\t" + field.getName() + ": " + (field.getFormat() == Field.FORMAT_FLOAT ? dp.getValue(field).asFloat() : dp.getValue(field)));
+        }
+    }
+
+    public static Calendar getTodayCalendar() {
         Calendar cal = Calendar.getInstance();
         Date now = new Date();
         cal.setTime(now);
-        long endTime = cal.getTimeInMillis();
-        cal.add(Calendar.WEEK_OF_YEAR, -1);
-        long startTime = cal.getTimeInMillis();
 
-        DateFormat dateFormat = getDateInstance();
-        Log.i(TAG, "Start: " + dateFormat.format(startTime));
-        Log.i(TAG, "End:   " + dateFormat.format(endTime));
-
-        DataReadRequest readRequest = new DataReadRequest.Builder()
-                // The data request can specify multiple data types to return, effectively
-                // combining multiple data queries into one call.
-                // In this example, it's very unlikely that the request is for several hundred
-                // datapoints each consisting of a few steps and a timestamp.  The more likely
-                // scenario is wanting to see how many steps were walked per day, for 7 days.
-                // .read(DataType.TYPE_LOCATION_TRACK)
-                .read(DataType.TYPE_LOCATION_SAMPLE)            // Detailed Request: Exact timestamp
-                // .aggregate(DataType.TYPE_LOCATION_SAMPLE,  DataType.AGGREGATE_LOCATION_BOUNDING_BOX) // Aggregated Request
-                // Analogous to a "Group By" in SQL, defines how data should be aggregated.
-                // bucketByTime allows for a time span, whereas bucketBySession would allow
-                // bucketing by "sessions", which would need to be defined in code.
-                // .bucketByTime(1, TimeUnit.HOURS)
-                // .bucketByTime(1, TimeUnit.DAYS)
-                // .bucketBySession(1, TimeUnit.DAYS)
-                .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
-                .build();
-        // [END build_read_data_request]
-
-        return readRequest;
+        return cal;
     }
 
     /**
@@ -474,7 +462,6 @@ public class FitHistory {
     public void deleteData() {
         Log.i(TAG, "Deleting today's step count data.");
 
-        // [START delete_dataset]
         // Set a start and end time for our data, using a start time of 1 day before this moment.
         Calendar cal = Calendar.getInstance();
         Date now = new Date();
@@ -508,7 +495,7 @@ public class FitHistory {
     }
 
     // Read the Daily Step Total: https://developers.google.com/fit/scenarios/read-daily-step-total
-    private class GetDailyStepTotalTask extends AsyncTask<Void, Void, Void> {
+    private class getDailyStepTotalTask extends AsyncTask<Void, Void, Void> {
         protected Void doInBackground(Void... params) {
 
             long total = 0;
@@ -523,7 +510,6 @@ public class FitHistory {
             } else {
                 Log.w(TAG, "There was a problem getting the step count.");
             }
-
             Log.i(TAG, "Total steps: " + total);
 
             return null;

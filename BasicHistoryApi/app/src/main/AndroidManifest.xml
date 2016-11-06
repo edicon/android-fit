@@ -51,7 +51,7 @@ limitations under the License.
             </intent-filter>
         </activity>
         <activity
-            android:name=".MainActivity2"
+            android:name=".FitUpdateActivity"
             android:label="@string/app_name" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

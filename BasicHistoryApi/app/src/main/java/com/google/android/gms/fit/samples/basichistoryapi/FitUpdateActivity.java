@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit;
  * This sample demonstrates how to use the History API of the Google Fit platform
  * to update data in the fitness history.
  */
-public class MainActivity2 extends HistoryActivity {
+public class FitUpdateActivity extends HistoryActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -67,9 +67,7 @@ public class MainActivity2 extends HistoryActivity {
                 endTime = dataPoint.getEndTime(TimeUnit.MILLISECONDS);
             }
 
-            // [START update_data_request]
             Log.i(TAG, "Updating the dataset in the History API.");
-
 
             DataUpdateRequest request = new DataUpdateRequest.Builder()
                     .setDataSet(dataSet)
@@ -77,8 +75,7 @@ public class MainActivity2 extends HistoryActivity {
                     .build();
 
             com.google.android.gms.common.api.Status updateStatus =
-                    Fitness.HistoryApi.updateData(mClient, request)
-                            .await(1, TimeUnit.MINUTES);
+                    Fitness.HistoryApi.updateData(mClient, request).await(1, TimeUnit.MINUTES);
 
             // Before querying the data, check to see if the update succeeded.
             if (!updateStatus .isSuccess()) {
@@ -91,12 +88,10 @@ public class MainActivity2 extends HistoryActivity {
             // [END update_data_request]
 
             // Create the query.
-            DataReadRequest readRequest = FitHistory.queryFitnessData();
+            DataReadRequest readRequest = FitHistory.queryFitnessData( FitHistory.getTodayCalendar());
+            DataReadResult dataReadResult = Fitness.HistoryApi.readData(mClient, readRequest).await(1, TimeUnit.MINUTES);
 
-            DataReadResult dataReadResult =
-                    Fitness.HistoryApi.readData(mClient, readRequest).await(1, TimeUnit.MINUTES);
-
-            FitHistory.printFitData(dataReadResult);
+            FitHistory.parseFitData(dataReadResult);
 
             return null;
         }
